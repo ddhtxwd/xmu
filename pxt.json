@@ -1,0 +1,21 @@
+{
+    "name": "XMUCAR",
+    "version": "0.0.0",
+    "description": "CAR by XMU",
+    "license": "MIT",
+    "dependencies": {
+        "core": "*",
+        "radio": "*",
+        "microphone": "*"
+    },
+    "files": [
+        "README.md",
+        "main.ts",
+        "EMRGBLight.ts"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "public": true,
+    "preferredEditor": "tsprj"
+}
