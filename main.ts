@@ -75,8 +75,8 @@ enum DHT11Type {
 }
 
 
-//% weight=100 color=#0fbc11 icon="\uf013"  block="XMU_CAR"
-namespace XMU_CAR {
+//% weight=100 color=#0fbc11 icon="\uf013"  block="XMU_AUTO"
+namespace XMU_AUTO {
 	
 	let COMMAND_I2C_ADDRESS = 0x24
     let DISPLAY_I2C_ADDRESS = 0x34
