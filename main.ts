@@ -380,6 +380,19 @@ namespace XMU_AUTO {
          
     }
 
+	//% blockId=sensor_waterqulity block="水质传感器 引脚 %pines 读取值"  group="水质传感器"
+    //% weight=70
+    //% inlineInputMode=inline
+    //% subcategory="传感器"
+    export function sensor_waterqulity(pines: AnalogPin): number{
+		let anv = pins.analogReadPin(pines);
+		if(anv > 1000)
+		{
+			anv = 1000;
+		}
+         return anv;
+         
+    }
 
     //% blockId=sensor_temperature block="引脚%pin获取环境温度"  group="LM35温度传感器"
     //% weight=70
