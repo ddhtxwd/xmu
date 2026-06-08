@@ -77,6 +77,188 @@ enum DHT11Type {
 
 //% weight=100 color=#0fbc11 icon="\uf013"  block="XMU_AUTO"
 namespace XMU_AUTO {
+
+	let serial_read: string;
+    let receive_id: string;
+    let receive_value: string;
+    let is_mqtt_conneted = false;
+    let is_wifi_conneted = false;
+    let is_uart_inited = false;
+    
+    let wifi_conneted: () => void = null;
+    let mqtt_conneted: () => void = null;
+    let mqtt_received: () => void = null;
+
+    
+
+    serial.onDataReceived('\n', function () {
+        serial_read = serial.readString()
+        if (serial_read.includes("AT")) {
+            if (serial_read.includes("XMU_WIFI") && serial_read.includes("OK")) {
+                is_wifi_conneted = true
+                //if (wifi_conneted) wifi_conneted()
+            }
+            else if (serial_read.includes("ONENET") && serial_read.includes("OK")) {
+                is_mqtt_conneted = true
+                //if (mqtt_conneted) mqtt_conneted()
+            }
+            else if (serial_read.includes("RECEIVE")) {
+                let start_index = 11
+                receive_value = serial_read.substr(start_index, serial_read.length - start_index)
+				while (receive_value.length > 0) {
+					let c = receive_value.substr(receive_value.length - 1, receive_value.length)
+					if (c == '\r' || c == '\n') {
+						receive_value = receive_value.substr(0, receive_value.length - 1)
+					} else {
+						break
+					}
+				}
+                if (mqtt_received) mqtt_received()
+            }
+        }
+    })
+
+    //% block="连接到云平台成功"
+    //% subcategory="联网"
+    export function is_connected(): boolean {
+        return is_mqtt_conneted;
+    }
+	
+	/**
+     * 向另一个设备发送信息
+     * @param data_id ; eg: "cmd"
+     * @param data_value ; eg: "28.5"
+    */
+    //% block="向另一个设备发送信息 话题名称：$data_id 内容：$data_value"
+    //% subcategory="联网"
+    export function OneNET_publish(data_id: string, data_value: string): void {
+
+        if(is_mqtt_conneted==false)return;
+
+        let cmd: string = "AT+PUBLISH=" + data_id + ',' + data_value + '\n'
+        serial.writeString(cmd)
+        basic.pause(100)
+    }
+	
+	/**
+     * 开启接收另一个设备的信息
+     * @param data_id ; eg: "cmd"
+    */
+    //% block="开启接收另一个设备的信息 话题名称：$data_id"
+    //% subcategory="联网"
+    export function OneNET_subscribe(data_id: string): void {
+        if(is_mqtt_conneted==false)return;
+
+        let cmd: string = "AT+SUBSCRIBE=" + data_id + '\n'
+        serial.writeString(cmd)
+        basic.pause(100)
+    }
+
+    /**
+     * On 收到云平台的命令
+     * @param handler MQTT receiveed callback
+    */
+    //% block="当收到命令时"
+    //% subcategory="联网"
+    export function on_mqtt_receiveed(handler: () => void): void {
+        mqtt_received = handler;
+    }
+    
+    /**
+     * 云平台连接成功
+     * @param handler MQTT connected callback
+    */
+    //% block="云平台连接成功"
+    //% subcategory="联网"
+    export function on_mqtt_connected(handler: () => void): void {
+        mqtt_conneted = handler;
+    }
+    
+    /**
+     * WIFI连接成功
+     * @param handler WIFI connected callback
+    */
+    //% block="WIFI连接成功"
+    //% subcategory="联网"
+    export function on_wifi_connected(handler: () => void): void {
+        wifi_conneted = handler;
+    }
+
+    //% block="收到的命令"
+    //% subcategory="联网"
+    export function get_value(): string {
+        return receive_value;
+    }
+    /**
+     * 向云平台发送信息
+     * @param data_id ; eg: "temp"
+     * @param data_value ; eg: "28.5"
+    */
+    //% block="向云平台发送信息 数据流名称：$data_id 内容：$data_value"
+    //% subcategory="联网"
+    export function OneNET_send(data_id: string, data_value: string): void {
+        if(is_mqtt_conneted==false)return;
+        let cmd: string = "AT+ON_SEND=" + data_id + ',' + data_value + '\n'
+        serial.writeString(cmd)
+        basic.pause(100)
+    }
+    /**
+     * 连接云平台
+     * @param product_id ; eg: "123456"
+     * @param machine_id ; eg: "123456789"
+     * @param pass ; eg: "1234"
+    */
+    //% block="连接云平台 产品ID：$product_id 设备ID：$machine_id 鉴权信息：$pass"
+    //% subcategory="联网"
+    export function OneNET_connect(product_id: string, machine_id: string, pass: string): void {
+        is_mqtt_conneted = false
+
+        let cmd: string = "AT+ONENET=" + product_id + ',' + machine_id + ',' + pass + '\n'
+        basic.pause(100)
+        while(is_mqtt_conneted==false){
+            serial.writeString(cmd)
+            let start_time = control.millis()
+            while(control.millis() - start_time < 5000){
+                basic.pause(10)
+                if(is_mqtt_conneted){
+                    if (mqtt_conneted) mqtt_conneted()
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * 连接WIFI
+     * @param ssid ; eg: "WIFI"
+     * @param pass ; eg: "12345678"
+    */
+    //% block="连接WIFI 名称：$ssid 密码：$pass"
+    //% subcategory="联网"
+    export function WIFI_connect(ssid: string, pass: string): void {
+        is_wifi_conneted = false
+        
+        serial.redirect(
+            SerialPin.P13,
+            SerialPin.P14,
+            BaudRate.BaudRate115200
+        )
+        basic.pause(100)
+        is_uart_inited = true
+        let cmd: string = "AT+XMU_WIFI=" + ssid + ',' + pass + '\n'
+        while(is_wifi_conneted==false){
+            serial.writeString(cmd)
+            let start_time = control.millis()
+            while(control.millis() - start_time < 5000){
+                basic.pause(100)
+                if(is_wifi_conneted){
+                    if (wifi_conneted) wifi_conneted()
+                    break;
+                }
+            }
+        }
+        basic.pause(100)
+    }
 	
 	let COMMAND_I2C_ADDRESS = 0x24
     let DISPLAY_I2C_ADDRESS = 0x34
