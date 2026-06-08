@@ -75,19 +75,35 @@ enum DHT11Type {
 }
 
 
+enum MCPTYPE {
+    //% block="字符串"
+    STRING = 'string',
+    //% block="整数"
+    Int = 'integer',
+    //% block="布尔"
+    BOOL = 'boolean'
+}
+
 //% weight=100 color=#0fbc11 icon="\uf013"  block="XMU_AUTO"
 namespace XMU_AUTO {
 
 	let serial_read: string;
     let receive_id: string;
     let receive_value: string;
+	
+	let mcp_cmd: string;
+	let mcp_value: string;
+	
     let is_mqtt_conneted = false;
     let is_wifi_conneted = false;
+	let is_mcp_conneted = false;
     let is_uart_inited = false;
     
     let wifi_conneted: () => void = null;
     let mqtt_conneted: () => void = null;
+	let mcp_conneted: () => void = null;
     let mqtt_received: () => void = null;
+	let mcp_received: () => void = null;
 
     
 
@@ -102,6 +118,10 @@ namespace XMU_AUTO {
                 is_mqtt_conneted = true
                 //if (mqtt_conneted) mqtt_conneted()
             }
+			else if (serial_read.includes("MCP") && serial_read.includes("OK")) {
+                is_mcp_conneted = true
+                //if (mqtt_conneted) mqtt_conneted()
+            }
             else if (serial_read.includes("RECEIVE")) {
                 let start_index = 11
                 receive_value = serial_read.substr(start_index, serial_read.length - start_index)
@@ -114,6 +134,31 @@ namespace XMU_AUTO {
 					}
 				}
                 if (mqtt_received) mqtt_received()
+            }
+			else if (serial_read.includes("MC_RECE")) {
+                let start_index = 11
+                mcp_cmd = serial_read.substr(start_index, serial_read.length - start_index)
+				while (mcp_cmd.length > 0) {
+					let c = mcp_cmd.substr(mcp_cmd.length - 1, mcp_cmd.length)
+					if (c == '\r' || c == '\n') {
+						mcp_cmd = mcp_cmd.substr(0, mcp_cmd.length - 1)
+					} else {
+						break
+					}
+				}
+            }
+			else if (serial_read.includes("MC_REVE")) {
+                let start_index = 11
+                mcp_value = serial_read.substr(start_index, serial_read.length - start_index)
+				while (mcp_value.length > 0) {
+					let c = mcp_value.substr(mcp_value.length - 1, mcp_value.length)
+					if (c == '\r' || c == '\n') {
+						mcp_value = mcp_value.substr(0, mcp_value.length - 1)
+					} else {
+						break
+					}
+				}
+                if (mcp_received) mcp_received()
             }
         }
     })
@@ -258,6 +303,126 @@ namespace XMU_AUTO {
             }
         }
         basic.pause(100)
+    }
+	
+	/**
+     * 连接WIFI
+     * @param ssid ; eg: "WIFI"
+     * @param pass ; eg: "12345678"
+    */
+    //% block="连接WIFI 名称：$ssid 密码：$pass"
+    //% subcategory="MCP"
+    export function MCP_WIFI_connect(ssid: string, pass: string): void {
+        is_wifi_conneted = false
+        
+        serial.redirect(
+            SerialPin.P13,
+            SerialPin.P14,
+            BaudRate.BaudRate115200
+        )
+        basic.pause(100)
+        is_uart_inited = true
+        let cmd: string = "AT+XMU_WIFI=" + ssid + ',' + pass + '\n'
+        while(is_wifi_conneted==false){
+            serial.writeString(cmd)
+            let start_time = control.millis()
+            while(control.millis() - start_time < 5000){
+                basic.pause(100)
+                if(is_wifi_conneted){
+                    if (wifi_conneted) wifi_conneted()
+                    break;
+                }
+            }
+        }
+        basic.pause(100)
+    }
+	
+	
+	
+	/**
+     * 连接MCP服务器
+     * @param url ; eg: "wss://api.xiaozhi.me/mcp/?token="
+    */
+    //% block="连接MCP服务器： $url"
+    //% subcategory="MCP"
+    export function MCP_connect(url: string): void {
+        is_mcp_conneted = false
+
+        let cmd: string = "AT+MCP=" + url + '\n'
+        basic.pause(100)
+        while(is_mcp_conneted==false){
+            serial.writeString(cmd)
+            let start_time = control.millis()
+            while(control.millis() - start_time < 5000){
+                basic.pause(10)
+                if(is_mcp_conneted){
+                    if (mcp_conneted) mcp_conneted()
+                    break;
+                }
+            }
+        }
+    }
+	
+	//% block="连接MCP成功"
+    //% subcategory="MCP"
+    export function MCP_is_connected(): boolean {
+        return is_mcp_conneted;
+    }
+	
+	
+	/**
+     * 向MCP注册设备
+     * @param name ; eg: "led"
+     * @param disc ; eg: "一盏LED灯"
+	 * @param value ; eg: ""
+    */
+    //% block="向MCP注册设备 名称：$name 描述：$disc 类型 ：$types 属性：$value"
+    //% subcategory="MCP"
+    export function MCP_set(name: string, disc: string, types: MCPTYPE, value: string): void {
+
+        if(is_mcp_conneted==false)return;
+
+        let cmd: string = "AT+MCP_SET=" + name + ',' + disc + ',' +types + ',' + value + '\n'
+        serial.writeString(cmd)
+        basic.pause(100)
+    }
+	
+	/**
+     * 当收到MCP命令时
+     * @param handler MCP receiveed callback
+    */
+    //% block="当收到MCP命令时"
+    //% subcategory="MCP"
+    export function on_mcp_receiveed(handler: () => void): void {
+        mcp_received = handler;
+    }
+	
+	
+	
+	/**
+     * 向MCP回复信息
+     * @param data_id ; eg: "led"
+     * @param data_value ; eg: "ON"
+    */
+    //% block="向MCP回复信息 名称：$data_id 值：$data_value"
+    //% subcategory="MCP"
+    export function MCP_send(data_id: string, data_value: string): void {
+        if(is_mcp_conneted==false)return;
+        let cmd: string = "AT+MCP_SEND=" + data_id + ',' + data_value + '\n'
+        serial.writeString(cmd)
+        basic.pause(100)
+    }
+	
+	//% block="收到的MCP命令"
+    //% subcategory="MCP"
+    export function get_mcp_cmd(): string {
+        return mcp_cmd;
+    }
+	
+	//% block="收到的MCP参数"
+    //% subcategory="MCP"
+    export function get_mcp_value(): string {
+        return mcp_value;
     }
 	
 	let COMMAND_I2C_ADDRESS = 0x24
