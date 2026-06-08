@@ -77,11 +77,11 @@ enum DHT11Type {
 
 enum MCPTYPE {
     //% block="字符串"
-    STRING = 'string',
+    STRING = 0,
     //% block="整数"
-    Int = 'integer',
+    Int = 1,
     //% block="布尔"
-    BOOL = 'boolean'
+    BOOL = 2
 }
 
 //% weight=100 color=#0fbc11 icon="\uf013"  block="XMU_AUTO"
@@ -382,7 +382,7 @@ namespace XMU_AUTO {
 
         if(is_mcp_conneted==false)return;
 
-        let cmd: string = "AT+MCP_SET=" + name + ',' + disc + ',' +types + ',' + value + '\n'
+        let cmd: string = "AT+MCP_SET=" + name + ',' + disc + ',' + types.toString() + ',' + value + '\n'
         serial.writeString(cmd)
         basic.pause(100)
     }
