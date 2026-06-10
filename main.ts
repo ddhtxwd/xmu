@@ -373,7 +373,7 @@ namespace XMU_AUTO {
 	/**
      * 向MCP注册设备
      * @param name ; eg: "led"
-     * @param disc ; eg: "一盏LED灯"
+     * @param disc ; eg: "a LED lamp"
 	 * @param value ; eg: ""
     */
     //% block="向MCP注册设备 名称：$name 描述：$disc 类型 ：$types 属性：$value"
@@ -382,7 +382,7 @@ namespace XMU_AUTO {
 
         if(is_mcp_conneted==false)return;
 
-        let cmd: string = "AT+MCP_SET=" + name + ',' + disc + ',' + types.toString() + ',' + value + '\n'
+        let cmd: string = "AT+MCP_SET=" + name + '/' + disc + '/' + types.toString() + '/' + value + '\n'
         serial.writeString(cmd)
         basic.pause(100)
     }
@@ -741,6 +741,20 @@ namespace XMU_AUTO {
          
     }
 
+
+	//% blockId=sensor_waterqulity block="浊度传感器 引脚 %pines 读取值"  group="浊度传感器"
+    //% weight=70
+    //% inlineInputMode=inline
+    //% subcategory="传感器"
+    export function sensor_waterqulity2(pines: AnalogPin): number{
+		let anv = pins.analogReadPin(pines);
+		if(anv > 1000)
+		{
+			anv = 1000;
+		}
+         return anv;
+         
+    }
     //% blockId=sensor_temperature block="引脚%pin获取环境温度"  group="LM35温度传感器"
     //% weight=70
     //% inlineInputMode=inline
