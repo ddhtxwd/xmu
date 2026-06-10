@@ -742,7 +742,7 @@ namespace XMU_AUTO {
     }
 
 
-	//% blockId=sensor_waterqulity block="浊度传感器 引脚 %pines 读取值"  group="浊度传感器"
+	//% blockId=sensor_waterqulity2 block="浊度传感器 引脚 %pines 读取值"  group="浊度传感器"
     //% weight=70
     //% inlineInputMode=inline
     //% subcategory="传感器"
