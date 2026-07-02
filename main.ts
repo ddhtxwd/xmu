@@ -380,7 +380,7 @@ namespace XMU_AUTO {
     //% subcategory="MCP"
     export function MCP_set(name: string, disc: string, types: MCPTYPE, value: string): void {
 
-        let cmd: string = "AT+MCP_SET=" + name + '/' + disc + '/' + types.toString() + '/' + value + '\n'
+        let cmd: string = "AT+MCP_SET=" + name + '/' + disc + '/' + types.toString() + '/' +  '\n'
         serial.writeString(cmd)
         basic.pause(100)
     }
